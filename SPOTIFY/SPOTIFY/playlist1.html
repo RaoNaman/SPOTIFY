@@ -485,17 +485,41 @@ const rawPlaylist = [
             
         }
 
+
+        let wakeLock = null;
+
+async function keepScreenOn() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log("Screen Wake Lock active");
+
+        wakeLock.addEventListener('release', () => {
+            console.log("Screen Wake Lock released");
+        });
+
+    } catch (err) {
+        console.log(`${err.name}, ${err.message}`);
+    }
+}
+
         function playSong() {
             audio.play();
             playIcon.style.display = 'none';
             pauseIcon.style.display = 'block';
             renderPlaylist(getVisibleSongs());
+
+              keepScreenOn();
         }
 
         function pauseSong() {
             audio.pause();
             playIcon.style.display = 'block';
             pauseIcon.style.display = 'none';
+
+             if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
         }
 
         function togglePlay() {
@@ -614,6 +638,12 @@ const rawPlaylist = [
     }
 }
 
+        document.addEventListener("visibilitychange", async () => {
+    if (wakeLock !== null && document.visibilityState === "visible") {
+        wakeLock = await navigator.wakeLock.request("screen");
+    }
+});
+        
         init();
     </script>
 </body>
