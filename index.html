@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>Music Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <style>
+        :root {
+            --bg-black: #000000;
+            --bg-surface: #121212;
+            --spotify-green: #1DB954;
+            --text-white: #FFFFFF;
+            --text-gray: #B3B3B3;
+            --bar-bg: #4d4d4d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--bg-black);
+            color: var(--text-white);
+        }
+
+        .container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100dvh;
+            background-color: var(--bg-surface);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .search-container {
+            padding: 12px 12px 4px 12px;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 25px;
+            border: none;
+            background-color: #2a2a2a;
+            color: white;
+            font-size: 15px;
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        .search-input:focus {
+            background-color: #333;
+        }
+
+        .playlist {
+            list-style: none;
+            margin: 0;
+            padding: 0 0 10px 0;
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .playlist::-webkit-scrollbar { width: 4px; }
+        .playlist::-webkit-scrollbar-thumb { background-color: #444; border-radius: 4px; }
+
+        .playlist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #222;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .playlist-item:hover {
+            background-color: #282828;
+        }
+
+        .playlist-item.playing-active {
+            background-color: #222;
+        }
+
+        .song-name {
+            font-size: 15px;
+            color: var(--text-white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 85%;
+        }
+
+        .playing-active .song-name {
+            color: var(--spotify-green);
+            font-weight: 600;
+        }
+
+        .equalizer {
+            display: none;
+            align-items: flex-end;
+            height: 15px;
+            gap: 3px;
+        }
+
+        .playing-active .equalizer {
+            display: flex;
+        }
+
+        .bar {
+            width: 3px;
+            background-color: var(--spotify-green);
+            animation: bounce 0.5s infinite ease-in-out alternate;
+        }
+        .bar:nth-child(1) { height: 10px; animation-delay: 0s; }
+        .bar:nth-child(2) { height: 16px; animation-delay: 0.2s; }
+        .bar:nth-child(3) { height: 8px; animation-delay: 0.4s; }
+        @keyframes bounce { 0% { height: 3px; } 100% { height: 16px; } }
+
+        .player-area {
+            background-color: #181818;
+            padding: 15px 20px 25px 20px;
+            border-top: 1px solid #282828;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .current-info {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .current-title {
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .progress-bar {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--bar-bg);
+            border-radius: 2px;
+            cursor: pointer;
+            outline: none;
+            background-image: linear-gradient(var(--spotify-green), var(--spotify-green));
+            background-size: 0% 100%;
+            background-repeat: no-repeat;
+        }
+
+        .progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .progress-bar:hover::-webkit-slider-thumb {
+            opacity: 1;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            margin-top: 5px;
+        }
+
+        .btn {
+            background: none;
+            border: none;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .btn-play {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            color: black !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-play:hover {
+            transform: scale(1.05);
+            background: var(--spotify-green);
+        }
+
+        .btn.active-mode {
+            color: var(--spotify-green);
+            position: relative;
+        }
+
+        .btn.active-mode::after {
+            content: '•';
+            position: absolute;
+            bottom: -12px;
+            font-size: 20px;
+            color: var(--spotify-green);
+        }
+
+        .manage-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .manage-panel {
+            width: min(430px, 100%);
+            background: #181818;
+            border: 1px solid #2d2d2d;
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+        }
+        .manage-header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:18px;
+        }
+        .manage-header h2 { font-size:20px; }
+        .manage-close {
+            background:none;
+            border:none;
+            color:#aaa;
+            font-size:26px;
+            cursor:pointer;
+            line-height:1;
+        }
+        .manage-option {
+            width:100%;
+            border:1px solid #303030;
+            background:#242424;
+            color:white;
+            padding:14px;
+            border-radius:12px;
+            margin-top:10px;
+            text-align:left;
+            cursor:pointer;
+            font-family:'Poppins',sans-serif;
+            font-size:14px;
+        }
+        .manage-option:hover { background:#2d2d2d; }
+        .upload-form { display:none; margin-top:14px; }
+        .manage-label {
+            display:block;
+            color:#b3b3b3;
+            font-size:12px;
+            margin:12px 0 6px;
+        }
+        .manage-input {
+            width:100%;
+            border:1px solid #333;
+            background:#101010;
+            color:white;
+            border-radius:10px;
+            padding:12px;
+            outline:none;
+            font-family:'Poppins',sans-serif;
+        }
+        .manage-file {
+            width:100%;
+            color:#bbb;
+            font-size:12px;
+        }
+        .manage-primary {
+            width:100%;
+            margin-top:16px;
+            border:none;
+            background:#1DB954;
+            color:#000;
+            padding:12px;
+            border-radius:22px;
+            font-weight:600;
+            cursor:pointer;
+            font-family:'Poppins',sans-serif;
+        }
+        .manage-status {
+            min-height:20px;
+            margin-top:12px;
+            color:#aaa;
+            font-size:12px;
+            line-height:1.5;
+        }
+        .manage-back {
+            background:none;
+            border:none;
+            color:#aaa;
+            cursor:pointer;
+            font-family:'Poppins',sans-serif;
+            font-size:12px;
+            margin-top:12px;
+        }
+        .manage-list {
+            display:none;
+            margin-top:14px;
+            max-height:55vh;
+            overflow-y:auto;
+            padding-right:3px;
+        }
+        .manage-song {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:11px 0;
+            border-bottom:1px solid #292929;
+        }
+        .manage-song-name {
+            flex:1;
+            min-width:0;
+            color:#fff;
+            font-size:13px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+        .manage-song-status {
+            color:#777;
+            font-size:10px;
+        }
+        .manage-small-btn {
+            border:1px solid #3a3a3a;
+            background:#242424;
+            color:#fff;
+            border-radius:9px;
+            padding:7px 9px;
+            font-size:11px;
+            cursor:pointer;
+            font-family:'Poppins',sans-serif;
+            flex-shrink:0;
+        }
+        .manage-small-btn:hover { background:#333; }
+        .manage-small-btn.delete { color:#ff7777; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="search-container">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search songs..." onkeyup="searchSongs()">
+                <button id="manageBtn" style="border:none; background:#2a2a2a; color:#fff; padding:12px 16px; border-radius:25px; cursor:pointer; font-family:'Poppins',sans-serif; font-size:14px; flex-shrink:0;">Manage</button>
+            </div>
+        </div>
+
+        <ul class="playlist" id="playlist"></ul>
+
+        <div class="player-area">
+            <div class="current-info">
+                <div class="current-title" id="currentTitle">Select a song</div>
+            </div>
+
+            <div class="progress-container">
+                <input type="range" value="0" class="progress-bar" id="progressBar">
+                <div class="time-info">
+                    <span id="currentTime">0:00</span>
+                    <span id="totalDuration">0:00</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="shuffleBtn" title="Shuffle">
+                    <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"></path></svg>
+                </button>
+
+                <button class="btn" id="prevBtn">
+                    <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"></path></svg>
+                </button>
+
+                <button class="btn btn-play" id="playPauseBtn">
+                    <svg id="playIcon" viewBox="0 0 24 24" style="width:30px; height:30px;"><path d="M8 5v14l11-7z"></path></svg>
+                    <svg id="pauseIcon" viewBox="0 0 24 24" style="width:30px; height:30px; display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
+                </button>
+
+                <button class="btn" id="nextBtn">
+                    <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"></path></svg>
+                </button>
+
+                <button class="btn active-mode" id="orderBtn" title="Order">
+                    <svg viewBox="0 0 24 24"><path d="M17 16.5l-4 4-4-4 1.41-1.41 2.59 2.59V3h2v14.68l2.59-2.59L17 16.5z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="manage-overlay" id="manageOverlay">
+        <div class="manage-panel">
+            <div class="manage-header">
+                <h2>Manage Songs</h2>
+                <button class="manage-close" id="manageClose">×</button>
+            </div>
+
+            <div id="manageMenu">
+                <button class="manage-option" id="uploadOption">➕ Upload Song</button>
+                <button class="manage-option" id="deleteOption">🗑️ Delete Song</button>
+                <button class="manage-option" id="hideOption">👁 Hide Song</button>
+                <button class="manage-option" id="unhideOption">↩ Unhide Song</button>
+            </div>
+
+            <div class="manage-list" id="manageList"></div>
+
+            <div class="upload-form" id="uploadForm">
+                <label class="manage-label" for="songNameInput">Song name</label>
+                <input class="manage-input" id="songNameInput" type="text" placeholder="Enter song name" autocomplete="off">
+
+                <label class="manage-label" for="songFileInput">Song file</label>
+                <input class="manage-file" id="songFileInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac">
+
+                <button class="manage-primary" id="uploadSongBtn">Upload Song</button>
+                <div class="manage-status" id="manageStatus"></div>
+                <button class="manage-back" id="uploadBack">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <iframe name="sheetPostFrame" id="sheetPostFrame" style="display:none;"></iframe>
+
+    <script>
+const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbwvDEsooPSB7LN9pG0A1Z0sqUMW0z5AS_j6ZPHixI9y8I5ttsKCBhPjYZHNbplPL-qbgQ/exec";
+
+const DROPBOX_APP_KEY = "z2jsae4mp6w30me";
+const DROPBOX_REDIRECT_URI = "http://127.0.0.1:5500/index.html";
+const DROPBOX_TOKEN_KEY = "music_player_dropbox_access_token";
+
+function setManageStatus(message, isError = false) {
+    const el = document.getElementById('manageStatus');
+    el.innerText = message;
+    el.style.color = isError ? '#ff6b6b' : '#aaa';
+}
+
+function randomString(length = 64) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    const values = new Uint8Array(length);
+    crypto.getRandomValues(values);
+    let out = '';
+    for (let i = 0; i < length; i++) out += chars[values[i] % chars.length];
+    return out;
+}
+
+function base64UrlEncode(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function sha256Base64Url(value) {
+    const data = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return base64UrlEncode(digest);
+}
+
+async function connectDropbox() {
+    const verifier = randomString(64);
+    const challenge = await sha256Base64Url(verifier);
+    sessionStorage.setItem('dropbox_pkce_verifier', verifier);
+
+    const params = new URLSearchParams({
+        client_id: DROPBOX_APP_KEY,
+        response_type: 'code',
+        redirect_uri: DROPBOX_REDIRECT_URI,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        token_access_type: 'offline'
+    });
+
+    window.location.href = 'https://www.dropbox.com/oauth2/authorize?' + params.toString();
+}
+
+async function handleDropboxCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return;
+
+    const verifier = sessionStorage.getItem('dropbox_pkce_verifier');
+    if (!verifier) return;
+
+    setManageStatus('Connecting to Dropbox...');
+
+    try {
+        const body = new URLSearchParams({
+            code,
+            grant_type: 'authorization_code',
+            client_id: DROPBOX_APP_KEY,
+            redirect_uri: DROPBOX_REDIRECT_URI,
+            code_verifier: verifier
+        });
+
+        const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.access_token) {
+            throw new Error(result.error_description || result.error || 'Dropbox authorization failed');
+        }
+
+        localStorage.setItem(DROPBOX_TOKEN_KEY, result.access_token);
+        sessionStorage.removeItem('dropbox_pkce_verifier');
+        history.replaceState({}, document.title, window.location.pathname);
+        setManageStatus('Dropbox connected.');
+    } catch (error) {
+        setManageStatus('Dropbox connection failed: ' + error.message, true);
+    }
+}
+
+async function uploadToDropbox(file, accessToken) {
+    const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/octet-stream',
+            'Dropbox-API-Arg': JSON.stringify({
+                path: '/Music/' + file.name,
+                mode: 'add',
+                autorename: true,
+                mute: false
+            })
+        },
+        body: file
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error_summary || 'Dropbox upload failed');
+    return result;
+}
+
+async function createDropboxSharedLink(path, accessToken) {
+    const response = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({path})
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.url) return result.url;
+
+    // If Dropbox says the file already has a shared link, retrieve existing links.
+    if (result.error && result.error['.tag'] === 'shared_link_already_exists') {
+        const existing = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + accessToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({path, direct_only: true})
+        });
+        const links = await existing.json();
+        if (existing.ok && links.links && links.links.length) return links.links[0].url;
+    }
+
+    throw new Error(result.error_summary || 'Could not create Dropbox shared link');
+}
+
+function makeRawDropboxUrl(url) {
+    try {
+        const u = new URL(url);
+        u.searchParams.delete('dl');
+        u.searchParams.set('raw', '1');
+        return u.toString();
+    } catch (e) {
+        return url.replace(/([?&])dl=[^&]*/i, '$1raw=1');
+    }
+}
+
+function appendSongToSheet(name, link) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GOOGLE_SHEET_API;
+    form.target = 'sheetPostFrame';
+    form.style.display = 'none';
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'data';
+    input.value = JSON.stringify({name, link, status: 'visible'});
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+}
+
+
+let allSongs = [];
+let playlist = [];
+let currentSongIndex = 0;
+let isShuffle = false;
+let playedHistory = [];
+let songsLoaded = false;
+
+function loadPlaylistFromSheet() {
+    const callbackName = "musicSheetCallback_" + Date.now();
+
+    window[callbackName] = function(data) {
+        try {
+            allSongs = Array.isArray(data)
+                ? data
+                    .filter(song => song && song.name && song.link)
+                    .map(song => ({
+                        name: String(song.name),
+                        src: String(song.link),
+                        status: String(song.status || "visible").toLowerCase()
+                    }))
+                : [];
+
+            playlist = allSongs
+                .filter(song => song.status !== "hidden")
+                .map(song => ({ name: song.name, src: song.src }));
+
+            currentSongIndex = 0;
+            playedHistory = [];
+            songsLoaded = true;
+            renderPlaylist();
+        } catch (error) {
+            console.error("Could not process Google Sheet data:", error);
+        } finally {
+            delete window[callbackName];
+            const script = document.getElementById(callbackName);
+            if (script) script.remove();
+        }
+    };
+
+    const script = document.createElement("script");
+    script.id = callbackName;
+    script.src = GOOGLE_SHEET_API + "?action=songs&callback=" + encodeURIComponent(callbackName);
+    script.onerror = function() {
+        console.error("Could not load songs from Google Sheet.");
+        delete window[callbackName];
+        script.remove();
+    };
+
+    document.body.appendChild(script);
+}
+
+
+function postSheetAction(action, song) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GOOGLE_SHEET_API;
+    form.target = 'sheetPostFrame';
+    form.style.display = 'none';
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'data';
+    input.value = JSON.stringify({
+        action,
+        name: song.name,
+        link: song.src
+    });
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+}
+
+function rebuildPlaylistAfterManagement() {
+    const previousSrc = playlist[currentSongIndex] ? playlist[currentSongIndex].src : '';
+    playlist = allSongs
+        .filter(song => song.status !== 'hidden')
+        .map(song => ({ name: song.name, src: song.src }));
+
+    if (previousSrc) {
+        const newIndex = playlist.findIndex(song => song.src === previousSrc);
+        currentSongIndex = newIndex >= 0 ? newIndex : 0;
+    } else {
+        currentSongIndex = Math.min(currentSongIndex, Math.max(playlist.length - 1, 0));
+    }
+
+    if (playlist.length === 0) {
+        currentSongIndex = 0;
+        titleEl.innerText = 'Select a song';
+    }
+
+    renderPlaylist(getVisibleSongs());
+}
+
+function showManageList(mode) {
+    const menu = document.getElementById('manageMenu');
+    const uploadForm = document.getElementById('uploadForm');
+    const list = document.getElementById('manageList');
+
+    menu.style.display = 'none';
+    uploadForm.style.display = 'none';
+    list.style.display = 'block';
+    list.innerHTML = '';
+
+    let songs = allSongs;
+    if (mode === 'hide') songs = songs.filter(song => song.status !== 'hidden');
+    if (mode === 'unhide') songs = songs.filter(song => song.status === 'hidden');
+
+    const heading = document.createElement('div');
+    heading.style.cssText = 'font-size:13px;color:#aaa;margin-bottom:8px;';
+    heading.innerText = mode === 'delete' ? 'Select a song to delete' : mode === 'hide' ? 'Select a song to hide' : 'Select a song to unhide';
+    list.appendChild(heading);
+
+    if (!songs.length) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'color:#777;font-size:12px;padding:18px 0;';
+        empty.innerText = mode === 'unhide' ? 'No hidden songs.' : 'No songs available.';
+        list.appendChild(empty);
+    }
+
+    songs.forEach(song => {
+        const row = document.createElement('div');
+        row.className = 'manage-song';
+
+        const name = document.createElement('div');
+        name.className = 'manage-song-name';
+        name.innerText = song.name;
+
+        const status = document.createElement('div');
+        status.className = 'manage-song-status';
+        status.innerText = song.status === 'hidden' ? 'hidden' : '';
+
+        const button = document.createElement('button');
+        button.className = 'manage-small-btn' + (mode === 'delete' ? ' delete' : '');
+        button.innerText = mode === 'delete' ? 'Delete' : mode === 'hide' ? 'Hide' : 'Unhide';
+
+        button.onclick = async function() {
+            if (mode === 'delete') {
+                const ok = confirm('Delete "' + song.name + '" from Dropbox and the database?');
+                if (!ok) return;
+                await deleteSong(song, button);
+            } else if (mode === 'hide') {
+                await changeSongVisibility(song, 'hidden', button);
+            } else {
+                await changeSongVisibility(song, 'visible', button);
+            }
+        };
+
+        row.appendChild(name);
+        row.appendChild(status);
+        row.appendChild(button);
+        list.appendChild(row);
+    });
+
+    const back = document.createElement('button');
+    back.className = 'manage-back';
+    back.innerText = '← Back';
+    back.onclick = function() {
+        list.style.display = 'none';
+        menu.style.display = 'block';
+        setManageStatus('');
+    };
+    list.appendChild(back);
+}
+
+async function changeSongVisibility(song, newStatus, button) {
+    button.disabled = true;
+    button.innerText = 'Saving...';
+    try {
+        postSheetAction(newStatus === 'hidden' ? 'hide' : 'unhide', song);
+        const local = allSongs.find(item => item.src === song.src);
+        if (local) local.status = newStatus;
+        rebuildPlaylistAfterManagement();
+        setManageStatus(newStatus === 'hidden' ? 'Song hidden.' : 'Song unhidden.');
+        setTimeout(() => {
+            showManageList(newStatus === 'hidden' ? 'unhide' : 'hide');
+        }, 800);
+    } catch (error) {
+        button.disabled = false;
+        button.innerText = newStatus === 'hidden' ? 'Hide' : 'Unhide';
+        setManageStatus('Could not update song: ' + error.message, true);
+    }
+}
+
+async function getDropboxPathFromSharedLink(sharedUrl, accessToken) {
+    const response = await fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: sharedUrl })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error_summary || 'Could not find Dropbox file');
+    if (!result.path_lower && !result.path_display) throw new Error('Dropbox file path was not returned');
+    return result.path_lower || result.path_display;
+}
+
+async function deleteDropboxFile(path, accessToken) {
+    const response = await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error_summary || 'Dropbox delete failed');
+    return result;
+}
+
+async function deleteSong(song, button) {
+    let token = localStorage.getItem(DROPBOX_TOKEN_KEY);
+    if (!token) {
+        setManageStatus('Dropbox is not connected. Opening Dropbox login...');
+        await connectDropbox();
+        return;
+    }
+
+    button.disabled = true;
+    button.innerText = 'Deleting...';
+    setManageStatus('Deleting from Dropbox...');
+
+    try {
+        const dropboxPath = await getDropboxPathFromSharedLink(song.src, token);
+        await deleteDropboxFile(dropboxPath, token);
+
+        setManageStatus('Removing from Google Sheet...');
+        postSheetAction('delete', song);
+
+        allSongs = allSongs.filter(item => item.src !== song.src);
+        rebuildPlaylistAfterManagement();
+        setManageStatus('Deleted successfully: ' + song.name);
+
+        setTimeout(() => showManageList('delete'), 800);
+    } catch (error) {
+        if (/expired|invalid|auth|access/i.test(error.message)) {
+            localStorage.removeItem(DROPBOX_TOKEN_KEY);
+        }
+        button.disabled = false;
+        button.innerText = 'Delete';
+        setManageStatus('Delete failed: ' + error.message, true);
+    }
+}
+
+
+        const audio = new Audio();
+
+        const titleEl = document.getElementById('currentTitle');
+        const progressBar = document.getElementById('progressBar');
+        const currentTimeEl = document.getElementById('currentTime');
+        const totalDurationEl = document.getElementById('totalDuration');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playlistContainer = document.getElementById('playlist');
+
+        function init() {
+            renderPlaylist();
+        }
+
+        function renderPlaylist(songs = playlist) {
+            playlistContainer.innerHTML = '';
+            songs.forEach(song => {
+                const isActive = (playlist[currentSongIndex].src === song.src) && (audio.src !== '');
+                const li = document.createElement('li');
+                li.classList.add('playlist-item');
+                if (isActive) li.classList.add('playing-active');
+
+                li.innerHTML = `
+                    <span class="song-name">${song.name}</span>
+                    <div class="equalizer">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                `;
+
+                li.onclick = () => {
+                    const mainIndex = playlist.findIndex(s => s.src === song.src);
+                    currentSongIndex = mainIndex;
+                    if (isShuffle && !playedHistory.includes(mainIndex)) playedHistory.push(mainIndex);
+                    loadSong(currentSongIndex);
+                    playSong();
+                };
+                playlistContainer.appendChild(li);
+            });
+        }
+
+        function loadSong(index) {
+            const song = playlist[index];
+            audio.src = song.src;
+            updateMediaSession(song);
+            titleEl.innerText = song.name;
+            progressBar.value = 0;
+            progressBar.style.backgroundSize = '0% 100%';
+            currentTimeEl.innerText = "0:00";
+            totalDurationEl.innerText = "...";
+            renderPlaylist(getVisibleSongs());
+            
+        }
+
+
+       let wakeLock = null;
+
+async function keepScreenOn() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {}
+}
+
+keepScreenOn();
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        keepScreenOn();
+    }
+});
+
+        function playSong() {
+            audio.play();
+            playIcon.style.display = 'none';
+            pauseIcon.style.display = 'block';
+            renderPlaylist(getVisibleSongs());
+
+              keepScreenOn();
+        }
+
+        function pauseSong() {
+            audio.pause();
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+
+             if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                if (!audio.src) loadSong(currentSongIndex);
+                playSong();
+            } else {
+                pauseSong();
+            }
+        }
+
+        function nextSong() {
+            if (isShuffle) {
+                if (playedHistory.length >= playlist.length) playedHistory = [];
+                let randomIndex;
+                if (playlist.length <= 1) randomIndex = 0;
+                else {
+                    do {
+                        randomIndex = Math.floor(Math.random() * playlist.length);
+                    } while (playedHistory.includes(randomIndex));
+                }
+                currentSongIndex = randomIndex;
+                playedHistory.push(currentSongIndex);
+            } else {
+                currentSongIndex = (currentSongIndex + 1) % playlist.length;
+            }
+            loadSong(currentSongIndex);
+            playSong();
+        }
+
+        function prevSong() {
+            currentSongIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
+            loadSong(currentSongIndex);
+            playSong();
+        }
+
+        function searchSongs() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = playlist.filter(s => s.name.toLowerCase().includes(query));
+            renderPlaylist(filtered);
+        }
+
+        function getVisibleSongs() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            return playlist.filter(s => s.name.toLowerCase().includes(query));
+        }
+
+        function formatTime(s) {
+            if (isNaN(s)) return "0:00";
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        function updateProgress() {
+            const duration = audio.duration;
+            const currentTime = audio.currentTime;
+            if (isNaN(duration)) return;
+            const percent = (currentTime / duration) * 100;
+            progressBar.value = percent;
+            progressBar.style.backgroundSize = `${percent}% 100%`;
+            currentTimeEl.innerText = formatTime(currentTime);
+            totalDurationEl.innerText = formatTime(duration);
+        }
+
+        playPauseBtn.onclick = togglePlay;
+        document.getElementById('nextBtn').onclick = nextSong;
+
+        document.getElementById('manageBtn').onclick = function() {
+            document.getElementById('manageOverlay').style.display = 'flex';
+            document.getElementById('manageMenu').style.display = 'block';
+            document.getElementById('uploadForm').style.display = 'none';
+            document.getElementById('manageList').style.display = 'none';
+            setManageStatus('');
+        };
+
+        document.getElementById('manageClose').onclick = function() {
+            document.getElementById('manageOverlay').style.display = 'none';
+        };
+
+        document.getElementById('manageOverlay').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+        };
+
+        document.getElementById('uploadOption').onclick = function() {
+            document.getElementById('manageMenu').style.display = 'none';
+            document.getElementById('uploadForm').style.display = 'block';
+            setManageStatus('');
+        };
+
+        document.getElementById('deleteOption').onclick = function() {
+            showManageList('delete');
+            setManageStatus('');
+        };
+
+        document.getElementById('hideOption').onclick = function() {
+            showManageList('hide');
+            setManageStatus('');
+        };
+
+        document.getElementById('unhideOption').onclick = function() {
+            showManageList('unhide');
+            setManageStatus('');
+        };
+
+        document.getElementById('uploadBack').onclick = function() {
+            document.getElementById('uploadForm').style.display = 'none';
+            document.getElementById('manageMenu').style.display = 'block';
+            setManageStatus('');
+        };
+
+        document.getElementById('uploadSongBtn').onclick = async function() {
+            const name = document.getElementById('songNameInput').value.trim();
+            const file = document.getElementById('songFileInput').files[0];
+
+            if (!name) {
+                setManageStatus('Enter a song name.', true);
+                return;
+            }
+
+            if (!file) {
+                setManageStatus('Choose a song file.', true);
+                return;
+            }
+
+            if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)) {
+                setManageStatus('Please choose an audio file.', true);
+                return;
+            }
+
+            let token = localStorage.getItem(DROPBOX_TOKEN_KEY);
+
+            if (!token) {
+                setManageStatus('Dropbox is not connected. Opening Dropbox login...');
+                await connectDropbox();
+                return;
+            }
+
+            this.disabled = true;
+            this.innerText = 'Uploading...';
+            setManageStatus('Uploading to Dropbox...');
+
+            try {
+                const uploaded = await uploadToDropbox(file, token);
+                setManageStatus('Creating playable link...');
+
+                const sharedUrl = await createDropboxSharedLink(uploaded.path_display, token);
+                const rawUrl = makeRawDropboxUrl(sharedUrl);
+
+                setManageStatus('Saving song to Google Sheet...');
+                appendSongToSheet(name, rawUrl);
+
+                // Add immediately to the current playlist as well.
+                const newSong = {name, src: rawUrl, status: 'visible'};
+                allSongs.push(newSong);
+                playlist.push({name, src: rawUrl});
+                renderPlaylist(getVisibleSongs());
+
+                document.getElementById('songNameInput').value = '';
+                document.getElementById('songFileInput').value = '';
+                setManageStatus('Uploaded successfully: ' + name);
+            } catch (error) {
+                if (/expired|invalid|auth|access/i.test(error.message)) {
+                    localStorage.removeItem(DROPBOX_TOKEN_KEY);
+                }
+                setManageStatus('Upload failed: ' + error.message, true);
+            } finally {
+                this.disabled = false;
+                this.innerText = 'Upload Song';
+            }
+        };
+        document.getElementById('prevBtn').onclick = prevSong;
+
+        document.getElementById('shuffleBtn').onclick = function() {
+            isShuffle = true;
+            this.classList.add('active-mode');
+            document.getElementById('orderBtn').classList.remove('active-mode');
+            playedHistory = [currentSongIndex];
+        };
+
+        document.getElementById('orderBtn').onclick = function() {
+            isShuffle = false;
+            this.classList.add('active-mode');
+            document.getElementById('shuffleBtn').classList.remove('active-mode');
+        };
+
+        audio.onended = nextSong;
+        audio.ontimeupdate = updateProgress;
+        audio.onloadedmetadata = () => {
+            totalDurationEl.innerText = formatTime(audio.duration);
+        };
+
+        progressBar.oninput = function() {
+            const val = this.value;
+            this.style.backgroundSize = `${val}% 100%`;
+            currentTimeEl.innerText = formatTime((val / 100) * audio.duration);
+        };
+
+        progressBar.onchange = function() {
+            audio.currentTime = (this.value / 100) * audio.duration;
+        };
+
+        function updateMediaSession(song) {
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: song.name,
+            artist: "Music Player",
+            album: "Playlist",
+            artwork: [
+                { src: "https://upload.wikimedia.org/wikipedia/commons/8/84/Spotify_icon.svg", sizes: "96x96", type: "image/png" },
+                { src: "https://upload.wikimedia.org/wikipedia/commons/8/84/Spotify_icon.svg", sizes: "192x192", type: "image/png" },
+                { src: "https://upload.wikimedia.org/wikipedia/commons/8/84/Spotify_icon.svg", sizes: "512x512", type: "image/png" }
+            ]
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => audio.play());
+        navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+        navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
+        navigator.mediaSession.setActionHandler('previoustrack', () => prevSong());
+    }
+}
+
+        document.addEventListener("visibilitychange", async () => {
+    if (wakeLock !== null && document.visibilityState === "visible") {
+        wakeLock = await navigator.wakeLock.request("screen");
+    }
+});
+        
+        handleDropboxCallback();
+        init();
+        loadPlaylistFromSheet();
+    </script>
+</body>
+</html>
+
